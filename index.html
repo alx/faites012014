@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <title>three.js - ASCII Effect</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <style>
+      body {
+        font-family: Monospace;
+        background-color: #000000;
+        margin: 0px;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+
+    <script src="js/three.min.js"></script>
+    <script>
+
+      var camera, scene, renderer;
+      var cubes = [];
+
+      var palette = [0x556270, 0x4ECDC4, 0xC7F464, 0xFF6B6B];
+
+      var mouse = new THREE.Vector2(), INTERSECTED;
+
+      init();
+      animate();
+
+      function init() {
+
+        scene = new THREE.Scene();
+
+        camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 2000 );
+        camera.position.set( 500, 1200, 500 );
+        camera.target = new THREE.Vector3( 500, 0, 500 );
+
+        var material = new THREE.MeshDepthMaterial( { side: THREE.DoubleSide, overdraw: 0.5 } );
+
+        geometry = new THREE.BoxGeometry( 100, 100, 100 );
+
+        for ( var i = 0; i < 100; i ++ ) {
+
+          var material = new THREE.MeshBasicMaterial({
+            overdraw: 0.5,
+            color: new THREE.Color(palette[Math.floor(Math.random() * palette.length)]),
+            vertexColors: new THREE.Color(0x000000),
+            wireframe: true
+          });
+          cube = new THREE.Mesh( geometry, material );
+
+          cube.position.x = ( i % 10 ) * 100;
+          cube.position.z = Math.floor( i / 10 ) * 100;
+
+
+          scene.add( cube );
+
+          cubes.push( cube );
+
+        }
+
+        projector = new THREE.Projector();
+        raycaster = new THREE.Raycaster();
+
+        renderer = new THREE.CanvasRenderer();
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        document.body.appendChild(renderer.domElement);
+
+        window.addEventListener( 'resize', onWindowResize, false );
+        document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+      }
+
+      function onDocumentMouseMove( event ) {
+
+        event.preventDefault();
+
+        mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+        mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+      }
+
+      function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+
+        renderer.setSize( window.innerWidth, window.innerHeight );
+      }
+
+      function animate() {
+        requestAnimationFrame( animate );
+
+        render();
+      }
+
+      function render() {
+        camera.lookAt( camera.target );
+
+        var vector = new THREE.Vector3( mouse.x, mouse.y, 1 );
+        projector.unprojectVector( vector, camera );
+
+        raycaster.set( camera.position, vector.sub( camera.position ).normalize() );
+
+        var intersects = raycaster.intersectObjects( scene.children );
+
+        if ( intersects.length > 0 ) {
+
+          intersects[0].object.material.wireframe = false;
+
+        }
+
+        renderer.render(scene, camera);
+      }
+
+    </script>
+  </body>
+</html>
