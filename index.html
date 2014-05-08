@@ -17,10 +17,11 @@
   <body>
 
     <script src="js/three.min.js"></script>
+    <script src="js/color-0.5.0.min.js"></script>
     <script>
 
       var camera, scene, renderer;
-      var cubes = [];
+      var isZoomed = false;
 
       var palette = [0x556270, 0x4ECDC4, 0xC7F464, 0xFF6B6B];
 
@@ -29,37 +30,52 @@
       init();
       animate();
 
-      function init() {
+      function pixelSquare (origin, pixels) {
 
-        scene = new THREE.Scene();
-
-        camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 2000 );
-        camera.position.set( 500, 1200, 500 );
-        camera.target = new THREE.Vector3( 500, 0, 500 );
-
-        var material = new THREE.MeshDepthMaterial( { side: THREE.DoubleSide, overdraw: 0.5 } );
+        parentGeometry = new THREE.BoxGeometry( 1000, 100, 1000 );
+        parentMaterial = new THREE.MeshBasicMaterial({
+            color: new THREE.Color(0xcccccc),
+            wireframe: true
+        });
+        parentSquare = new THREE.Mesh(parentGeometry, parentMaterial);
+        parentSquare.position.x = origin.positionX * 1000 + 450;
+        parentSquare.position.z = origin.positionY * 1000 + 450;
+        scene.add( parentSquare );
 
         geometry = new THREE.BoxGeometry( 100, 100, 100 );
 
         for ( var i = 0; i < 100; i ++ ) {
 
           var material = new THREE.MeshBasicMaterial({
+            wireframeLinewidth: 0.1,
             overdraw: 0.5,
             color: new THREE.Color(palette[Math.floor(Math.random() * palette.length)]),
-            vertexColors: new THREE.Color(0x000000),
             wireframe: true
           });
           cube = new THREE.Mesh( geometry, material );
 
-          cube.position.x = ( i % 10 ) * 100;
-          cube.position.z = Math.floor( i / 10 ) * 100;
+          cube.position.x = ( i % 10 ) * 100 + origin.positionX * 1000;
+          cube.position.z = Math.floor( i / 10 ) * 100 + origin.positionY * 1000;
 
-
-          scene.add( cube );
-
-          cubes.push( cube );
+          parentSquare.children.push(cube);
 
         }
+
+      };
+
+      function init() {
+
+        scene = new THREE.Scene();
+
+        camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 5000 );
+        camera.position.set( 500, 4000, 500 );
+        camera.target = new THREE.Vector3( 500, 0, 500 );
+
+        pixelSquare({positionX: 0, positionY: 0}, []);
+        pixelSquare({positionX: 1, positionY: 0}, []);
+        pixelSquare({positionX: -1, positionY: 0}, []);
+        pixelSquare({positionX: 0, positionY: 1}, []);
+        pixelSquare({positionX: 0, positionY: -1}, []);
 
         projector = new THREE.Projector();
         raycaster = new THREE.Raycaster();
@@ -70,6 +86,22 @@
 
         window.addEventListener( 'resize', onWindowResize, false );
         document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+        document.addEventListener( 'click', onDocumentMouseClick, false );
+      }
+
+      function onDocumentMouseClick( event ) {
+
+        event.preventDefault();
+
+        if(isZoomed) {
+          camera.position.set( 500, 4000, 500 );
+          isZoomed = false;
+        } else {
+          camera.position.set( 500, 1500, 500 );
+          isZoomed = true;
+        }
+        camera.updateProjectionMatrix();
+
       }
 
       function onDocumentMouseMove( event ) {
@@ -97,17 +129,19 @@
       function render() {
         camera.lookAt( camera.target );
 
-        var vector = new THREE.Vector3( mouse.x, mouse.y, 1 );
-        projector.unprojectVector( vector, camera );
+        if(isZoomed) {
+          var vector = new THREE.Vector3( mouse.x, mouse.y, 1 );
+          projector.unprojectVector( vector, camera );
 
-        raycaster.set( camera.position, vector.sub( camera.position ).normalize() );
+          raycaster.set( camera.position, vector.sub( camera.position ).normalize() );
 
-        var intersects = raycaster.intersectObjects( scene.children );
+          var intersects = raycaster.intersectObjects( scene.children );
 
-        if ( intersects.length > 0 ) {
+          if ( intersects.length > 0 ) {
 
-          intersects[0].object.material.wireframe = false;
+            intersects[0].object.material.wireframe = false;
 
+          }
         }
 
         renderer.render(scene, camera);
